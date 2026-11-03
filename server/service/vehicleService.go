@@ -37,7 +37,7 @@ func CreateVehicle(model models.CreateVehicleRequest, userId string) (*db.Vehicl
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
-	SeedVehicleDefaults(&vehicle)
+	SeedVehicleDefaults(&vehicle, model.Odometer)
 	return &vehicle, nil
 
 }

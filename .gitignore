@@ -2,3 +2,6 @@
 .vscode
 !.vscode/launch.json
 
+
+web/node_modules
+web/dist

@@ -93,8 +93,10 @@ var defaultServices = []struct {
 }
 
 // SeedServiceDefaults adds the standard maintenance schedule, starting from today.
-func SeedServiceDefaults(v *db.Vehicle) error {
-	odo := CurrentOdometer(v.ID)
+func SeedServiceDefaults(v *db.Vehicle, odo int) error {
+	if cur := CurrentOdometer(v.ID); cur > odo {
+		odo = cur
+	}
 	now := time.Now()
 	for _, s := range defaultServices {
 		trig := "first"
@@ -110,22 +112,22 @@ func SeedServiceDefaults(v *db.Vehicle) error {
 	return nil
 }
 
-func ensureTireSet(v *db.Vehicle) {
+func ensureTireSet(v *db.Vehicle, odo int) {
 	var count int64
 	db.DB.Model(&db.TireSet{}).Where("vehicle_id = ?", v.ID).Count(&count)
 	if count == 0 {
 		now := time.Now()
 		db.DB.Create(&db.TireSet{VehicleID: v.ID, Name: "Current tires", Size: v.TireSize, IsMounted: true,
-			InstalledDate: &now, InstalledOdo: CurrentOdometer(v.ID), TreadNew: 10})
+			InstalledDate: &now, InstalledOdo: maxInt(odo, CurrentOdometer(v.ID)), TreadNew: 10})
 	}
 }
 
 // SeedVehicleDefaults runs when a vehicle is created.
-func SeedVehicleDefaults(v *db.Vehicle) {
-	if err := SeedServiceDefaults(v); err != nil {
+func SeedVehicleDefaults(v *db.Vehicle, odo int) {
+	if err := SeedServiceDefaults(v, odo); err != nil {
 		log.Println("seed services:", err)
 	}
-	ensureTireSet(v)
+	ensureTireSet(v, odo)
 }
 
 // ---------------------------------------------------------------- reminders
@@ -344,7 +346,7 @@ func patternFor(drivetrain string) string {
 }
 
 func GetTireOverview(v *db.Vehicle) TireOverview {
-	ensureTireSet(v)
+	ensureTireSet(v, 0)
 	o := TireOverview{Pattern: rotationPatterns[patternFor(v.Drivetrain)].Name, Odometer: CurrentOdometer(v.ID), MilesDay: MilesPerDay(v.ID)}
 	if o.Odometer > 0 {
 		db.DB.Model(&db.TireSet{}).Where("vehicle_id = ? AND is_mounted = ? AND installed_odo = 0", v.ID, true).Update("installed_odo", o.Odometer)
@@ -617,7 +619,7 @@ func CheckRecalls(v *db.Vehicle) ([]RecallItem, error) {
 	v.RecallData = string(data)
 	v.RecallCheckedAt = &now
 	recountRecalls(v)
-	err = db.DB.Model(v).Updates(map[string]interface{}{"recall_data": v.RecallData, "recall_checked_at": now, "recall_count": v.RecallCount}).Error
+	err = db.UpdateVehicleColumns(v.ID).Updates(map[string]interface{}{"recall_data": v.RecallData, "recall_checked_at": now, "recall_count": v.RecallCount}).Error
 	return GetRecalls(v), err
 }
 
@@ -634,7 +636,7 @@ func SetRecallDismissed(v *db.Vehicle, campaign string, dismissed bool) error {
 	}
 	v.RecallDismissed = strings.Join(keys, ",")
 	recountRecalls(v)
-	return db.DB.Model(v).Updates(map[string]interface{}{"recall_dismissed": v.RecallDismissed, "recall_count": v.RecallCount}).Error
+	return db.UpdateVehicleColumns(v.ID).Updates(map[string]interface{}{"recall_dismissed": v.RecallDismissed, "recall_count": v.RecallCount}).Error
 }
 
 func RunRecallChecks() {

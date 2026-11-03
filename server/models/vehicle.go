@@ -37,6 +37,7 @@ type CreateVehicleRequest struct {
 	PurchasePrice     float32    `json:"purchasePrice"`
 	EstimatedValue    float32    `json:"estimatedValue"`
 	InsurancePremium  float32    `json:"insurancePremium"`
+	Odometer          int        `json:"odometer"`
 }
 
 type UpdateVehicleRequest struct {

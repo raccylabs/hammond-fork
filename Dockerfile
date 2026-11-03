@@ -9,18 +9,16 @@ RUN go mod download
 COPY ./server .
 RUN go build -o ./app ./main.go
 
-FROM node:16-alpine as build-stage
+FROM node:22-alpine AS build-stage
 WORKDIR /app
-COPY ./ui/package*.json ./
-RUN apk add --no-cache autoconf automake build-base nasm libc6-compat python3 py3-pip make g++ libpng-dev zlib-dev pngquant
-
-RUN npm install
-COPY ./ui .
+COPY ./web/package*.json ./
+RUN npm ci
+COPY ./web .
 RUN npm run build
 
 
 FROM alpine:latest
-LABEL org.opencontainers.image.source="https://github.com/alfhou/hammond"
+LABEL org.opencontainers.image.source="https://github.com/raccylabs/hammond"
 ENV CONFIG=/config
 ENV DATA=/assets
 ENV UID=998

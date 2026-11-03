@@ -21,7 +21,7 @@ func RegisterPlusController(router *gin.RouterGroup) {
 
 	router.GET("/vehicles/:id/services", listServices)
 	router.POST("/vehicles/:id/services", createService)
-	router.POST("/vehicles/:id/services/defaults", seedServices)
+	router.POST("/vehicles/:id/default-services", seedServices)
 	router.PUT("/vehicles/:id/services/:subId", updateService)
 	router.DELETE("/vehicles/:id/services/:subId", deleteService)
 	router.POST("/vehicles/:id/services/:subId/complete", completeService)
@@ -41,10 +41,11 @@ func RegisterPlusController(router *gin.RouterGroup) {
 	router.DELETE("/vehicles/:id/documents/:subId", deleteDocument)
 
 	router.POST("/vehicles/:id/photo", uploadVehiclePhoto)
+	router.POST("/vehicles/:id/files", uploadVehicleFile)
 	router.DELETE("/vehicles/:id/photo", deleteVehiclePhoto)
 
 	router.GET("/vehicles/:id/recalls", getRecalls)
-	router.POST("/vehicles/:id/recalls/check", checkRecalls)
+	router.POST("/vehicles/:id/recall-check", checkRecalls)
 	router.POST("/vehicles/:id/recalls/:subId/dismiss", dismissRecall)
 	router.DELETE("/vehicles/:id/recalls/:subId/dismiss", undismissRecall)
 
@@ -199,7 +200,7 @@ func seedServices(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := service.SeedServiceDefaults(v); err != nil {
+	if err := service.SeedServiceDefaults(v, 0); err != nil {
 		fail(c, "service", err)
 		return
 	}
@@ -555,11 +556,33 @@ func uploadVehiclePhoto(c *gin.Context) {
 		fail(c, "photo", err)
 		return
 	}
-	if err := db.DB.Model(v).Update("photo_attachment_id", att.ID).Error; err != nil {
+	if err := db.UpdateVehicleColumns(v.ID).Update("photo_attachment_id", att.ID).Error; err != nil {
 		fail(c, "photo", err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"photoAttachmentId": att.ID})
+}
+
+// uploadVehicleFile stores a file, links it to the vehicle and returns the attachment.
+func uploadVehicleFile(c *gin.Context) {
+	v, ok := vehicleFor(c)
+	if !ok {
+		return
+	}
+	att, err := saveUploadedFile(c, "file")
+	if err != nil {
+		fail(c, "file", err)
+		return
+	}
+	title := c.PostForm("title")
+	if title == "" {
+		title = att.OriginalName
+	}
+	if err := service.CreateVehicleAttachment(v.ID, att.ID, title); err != nil {
+		fail(c, "file", err)
+		return
+	}
+	c.JSON(http.StatusOK, att)
 }
 
 func deleteVehiclePhoto(c *gin.Context) {
@@ -567,7 +590,7 @@ func deleteVehiclePhoto(c *gin.Context) {
 	if !ok {
 		return
 	}
-	db.DB.Model(v).Update("photo_attachment_id", "")
+	db.UpdateVehicleColumns(v.ID).Update("photo_attachment_id", "")
 	c.JSON(http.StatusOK, gin.H{})
 }
 

@@ -1,6 +1,10 @@
 package db
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 // ServiceItem is a recurring maintenance task or a custom reminder for a vehicle.
 // Trigger is "first" (whichever of miles / months comes first), "miles" or "date".
@@ -99,4 +103,11 @@ type NotificationLog struct {
 	Base
 	Key    string    `json:"key" gorm:"index"`
 	SentAt time.Time `json:"sentAt"`
+}
+
+// UpdateVehicleColumns targets only the vehicles row. Updating through a vehicle
+// that has fillups/expenses preloaded would make GORM upsert those associations,
+// and Base.BeforeCreate assigns fresh IDs, which duplicates every record.
+func UpdateVehicleColumns(vehicleID string) *gorm.DB {
+	return DB.Model(&Vehicle{}).Where("id = ?", vehicleID)
 }

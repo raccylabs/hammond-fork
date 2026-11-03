@@ -15,6 +15,39 @@
   </p>
 </p>
 
+## Hammond+ (raccylabs fork)
+
+This branch redesigns Hammond with a new interface and brand, and adds:
+
+- **Reminders that notify**: maintenance schedules by distance, date or whichever comes first, document expiry and open recalls, sent through ntfy, email (SMTP) or a webhook (Home Assistant). Snooze or log from the list.
+- **Add a vehicle by VIN**: decodes year, make, model, trim, engine and drivetrain with NHTSA vPIC, then checks recalls weekly.
+- **Receipt scanning**: snap the pump or receipt and the fillup form fills itself (Tesseract.js, runs in the browser).
+- **Documents**: insurance, registration, title and warranties with expiry dates and a one-tap insurance card.
+- **Tires**: tire sets (swap summer/winter), rotations with the right pattern for FWD/AWD/4WD, tread readings and a replacement projection.
+- **Cost of ownership**: cost per distance, category breakdown including depreciation and insurance, a 12-month projection, and a printable service history.
+- Dark and light themes, phone layout, gentle chart animation (respects reduced-motion).
+
+The new frontend lives in `web/` (Vue 3 + Vite). The original Vue 2 UI in `ui/` is no longer built.
+
+### Run it
+
+```bash
+docker build -t hammond-plus .
+docker run -d -p 3000:3000 -e JWT_SECRET=change-me \
+  -v /path/to/config:/config -v /path/to/data:/assets hammond-plus
+```
+
+Existing Hammond databases upgrade in place on first start. Back up `hammond.db` first anyway.
+
+The server needs outbound HTTPS to `vpic.nhtsa.dot.gov` and `api.nhtsa.gov` for VIN decoding and recalls. Receipt scanning downloads its OCR model from jsDelivr the first time it runs in a browser.
+
+### Develop
+
+```bash
+cd server && CONFIG=./tmp DATA=./tmp JWT_SECRET=dev go run .   # API on :3000
+cd web && npm install && npm run dev                            # UI on :5173, proxies /api
+```
+
 <!-- TABLE OF CONTENTS -->
 
 ## Table of Contents
