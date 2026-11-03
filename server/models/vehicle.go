@@ -26,6 +26,17 @@ type CreateVehicleRequest struct {
 	FuelUnit          *db.FuelUnit `form:"fuelUnit" json:"fuelUnit" binding:"required"`
 
 	FuelType *db.FuelType `form:"fuelType" json:"fuelType" binding:"required"`
+
+	Trim              string     `json:"trim"`
+	Drivetrain        string     `json:"drivetrain"`
+	OilType           string     `json:"oilType"`
+	TireSize          string     `json:"tireSize"`
+	TirePressureFront float32    `json:"tirePressureFront"`
+	TirePressureRear  float32    `json:"tirePressureRear"`
+	PurchaseDate      *time.Time `json:"purchaseDate"`
+	PurchasePrice     float32    `json:"purchasePrice"`
+	EstimatedValue    float32    `json:"estimatedValue"`
+	InsurancePremium  float32    `json:"insurancePremium"`
 }
 
 type UpdateVehicleRequest struct {

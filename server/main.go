@@ -52,6 +52,7 @@ func main() {
 	controllers.RegisterFilesController(router)
 	controllers.RegisteImportController(router)
 	controllers.RegisterReportsController(router)
+	controllers.RegisterPlusController(router)
 
 	go assetEnv()
 	go intiCron()
@@ -74,6 +75,8 @@ func intiCron() {
 
 	//gocron.Every(uint64(checkFrequency)).Minutes().Do(service.DownloadMissingEpisodes)
 	gocron.Every(2).Days().Do(service.CreateBackup)
+	gocron.Every(1).Hour().Do(service.RunReminderNotifications)
+	gocron.Every(1).Day().Do(service.RunRecallChecks)
 	<-gocron.Start()
 }
 

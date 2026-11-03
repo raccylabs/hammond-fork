@@ -22,6 +22,7 @@ func CreateVehicle(model models.CreateVehicleRequest, userId string) (*db.Vehicl
 		FuelUnit:          *model.FuelUnit,
 		FuelType:          *model.FuelType,
 	}
+	applyVehicleSpecs(&vehicle, model)
 
 	tx := db.DB.Create(&vehicle)
 	if tx.Error != nil {
@@ -36,6 +37,7 @@ func CreateVehicle(model models.CreateVehicleRequest, userId string) (*db.Vehicl
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
+	SeedVehicleDefaults(&vehicle)
 	return &vehicle, nil
 
 }
@@ -109,6 +111,7 @@ func UpdateVehicle(vehicleID string, model models.UpdateVehicleRequest) error {
 	toUpdate.EngineSize = model.EngineSize
 	toUpdate.FuelUnit = *model.FuelUnit
 	toUpdate.FuelType = *model.FuelType
+	applyVehicleSpecs(toUpdate, model.CreateVehicleRequest)
 	//}).Error
 
 	return db.DB.Omit(clause.Associations).Save(toUpdate).Error

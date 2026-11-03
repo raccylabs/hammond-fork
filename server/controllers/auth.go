@@ -34,7 +34,7 @@ func ShouldBeAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		model := c.MustGet("userModel").(db.User)
 		if model.Role != db.ADMIN {
-			c.JSON(http.StatusUnauthorized, gin.H{})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{})
 		} else {
 			c.Next()
 		}
@@ -67,7 +67,8 @@ func initializeSystem(c *gin.Context) {
 
 	canInitialize, err := service.CanInitializeSystem()
 	if !canInitialize {
-		c.JSON(http.StatusUnprocessableEntity, err)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "already initialized", "detail": err})
+		return
 	}
 
 	var registerRequest models.RegisterRequest

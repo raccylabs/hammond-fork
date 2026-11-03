@@ -67,6 +67,21 @@ type Vehicle struct {
 	EngineSize        float32      `json:"engineSize"`
 	FuelUnit          FuelUnit     `json:"fuelUnit"`
 	FuelType          FuelType     `json:"fuelType"`
+	Trim              string       `json:"trim"`
+	Drivetrain        string       `json:"drivetrain"`
+	OilType           string       `json:"oilType"`
+	TireSize          string       `json:"tireSize"`
+	TirePressureFront float32      `json:"tirePressureFront"`
+	TirePressureRear  float32      `json:"tirePressureRear"`
+	PurchaseDate      *time.Time   `json:"purchaseDate"`
+	PurchasePrice     float32      `json:"purchasePrice"`
+	EstimatedValue    float32      `json:"estimatedValue"`
+	InsurancePremium  float32      `json:"insurancePremium"`
+	PhotoAttachmentID string       `json:"photoAttachmentId"`
+	RecallCount       int          `json:"recallCount"`
+	RecallCheckedAt   *time.Time   `json:"recallCheckedAt"`
+	RecallData        string       `json:"-"`
+	RecallDismissed   string       `json:"-"`
 	Users             []User       `gorm:"many2many:user_vehicles;" json:"users"`
 	Fillups           []Fillup     `json:"fillups"`
 	Expenses          []Expense    `json:"expenses"`
@@ -138,18 +153,19 @@ func (b *Fillup) MarshalJSON() ([]byte, error) {
 
 type Expense struct {
 	Base
-	VehicleID    string       `json:"vehicleId"`
-	Vehicle      Vehicle      `json:"-"`
-	Amount       float32      `json:"amount"`
-	OdoReading   int          `json:"odoReading"`
-	Comments     string       `json:"comments"`
-	ExpenseType  string       `json:"expenseType"`
-	UserID       string       `json:"userId"`
-	User         User         `json:"user"`
-	Date         time.Time    `json:"date"`
-	Currency     string       `json:"currency"`
-	DistanceUnit DistanceUnit `json:"distanceUnit"`
-	Source       string       `json:"source"`
+	VehicleID     string       `json:"vehicleId"`
+	Vehicle       Vehicle      `json:"-"`
+	Amount        float32      `json:"amount"`
+	OdoReading    int          `json:"odoReading"`
+	Comments      string       `json:"comments"`
+	ExpenseType   string       `json:"expenseType"`
+	ServiceItemID string       `json:"serviceItemId"`
+	UserID        string       `json:"userId"`
+	User          User         `json:"user"`
+	Date          time.Time    `json:"date"`
+	Currency      string       `json:"currency"`
+	DistanceUnit  DistanceUnit `json:"distanceUnit"`
+	Source        string       `json:"source"`
 }
 
 type Setting struct {
