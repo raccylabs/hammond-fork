@@ -8,6 +8,7 @@ import { blankVehicle, toPayload } from '../lib/vehicleForm.js'
 import Modal from './Modal.vue'
 import Icon from './Icon.vue'
 import VehicleFields from './VehicleFields.vue'
+import PhotoPicker from './PhotoPicker.vue'
 
 const router = useRouter()
 const step = ref(1)
@@ -19,6 +20,9 @@ const err = ref('')
 const m = reactive(blankVehicle())
 const photo = ref(null)
 const photoUrl = ref('')
+const photoCredit = ref('')
+const changing = ref(false)
+function onPick({ file, credit, previewUrl }) { photo.value = file; photoCredit.value = credit || ''; photoUrl.value = previewUrl; changing.value = false }
 const busy = ref(false)
 const recall = ref(null) // { ok, count, error }
 
@@ -60,7 +64,7 @@ async function finish() {
   try {
     const v = await post('/vehicles', toPayload(m))
     if (photo.value) {
-      const fd = new FormData(); fd.append('file', photo.value)
+      const fd = new FormData(); fd.append('file', photo.value); fd.append('credit', photoCredit.value)
       await upload(`/vehicles/${v.id}/photo`, fd).catch(() => toast('Vehicle added, but the photo upload failed', true))
     }
     post(`/vehicles/${v.id}/recall-check`).catch(() => {})
@@ -113,15 +117,13 @@ function next() {
     </template>
 
     <template v-if="step === 2">
-      <div class="plate" style="height: 220px">
-        <img v-if="photoUrl" :src="photoUrl" alt="Vehicle photo preview" />
-        <div v-else class="stack" style="align-items: center; color: #a9a3a0; font-size: 14px"><Icon name="camera" :size="30" />Add a photo so you can spot it at a glance</div>
-      </div>
-      <div class="row wrap">
-        <label class="btn ghost"><Icon name="upload" :size="18" />{{ photoUrl ? 'Choose another' : 'Choose a photo' }}<input type="file" accept="image/*" class="sr-only" @change="pickPhoto" /></label>
-        <span class="label grow">Side or three-quarter shots look best on the dark plate. A cut-out PNG with a transparent background looks best of all.</span>
-      </div>
-      <div class="row"><button class="btn ghost" @click="step--">Back</button><button class="btn pri grow" @click="next">{{ photoUrl ? 'Next: recalls & schedule' : 'Skip for now' }}</button></div>
+      <template v-if="photoUrl && !changing">
+        <div class="plate" style="height: 220px"><img :src="photoUrl" alt="Vehicle photo preview" /></div>
+        <div v-if="photoCredit" class="label">Photo: {{ photoCredit }}</div>
+        <div class="row"><button class="btn ghost" @click="changing = true">Choose a different photo</button></div>
+      </template>
+      <PhotoPicker v-else inline :vehicle="m" @pick="onPick" />
+      <div class="row"><button class="btn ghost" @click="step--">Back</button><button class="btn grow" :class="photoUrl ? 'pri' : 'ghost'" @click="next">{{ photoUrl ? 'Next: recalls & schedule' : 'Skip for now' }}</button></div>
     </template>
 
     <template v-if="step === 3">

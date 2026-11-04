@@ -146,6 +146,11 @@ h1, h2, h3 { margin: 0; }
 .tbl tr { animation: rise 0.5s both; }
 .scrollx { overflow-x: auto; }
 .listrow { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+/* label row and value row share baselines across columns */
+.facts { display: grid; grid-template-columns: 1.4fr 1fr 1fr; grid-template-rows: auto auto; grid-auto-flow: column; column-gap: 12px; row-gap: 4px; align-items: baseline; }
+.rowbtn { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); cursor: pointer; width: 100%; }
+.rowbtn:hover { background: var(--card2); }
+.log-cards { display: none; }
 .tile-ic { width: 36px; height: 36px; border-radius: 10px; background: var(--card2); display: flex; align-items: center; justify-content: center; flex: none; }
 
 /* ---------- charts ---------- */
@@ -210,6 +215,8 @@ h1, h2, h3 { margin: 0; }
   .bnav .navbtn { flex-direction: column; gap: 2px; font-size: 11px; padding: 6px 8px; background: none; }
   .drawer { top: auto; width: 100%; max-height: 90vh; border-radius: 22px 22px 0 0; border-left: none; animation-name: rise; }
   .grid3 { grid-template-columns: 1fr 1fr; }
+  .log-table { display: none; }
+  .log-cards { display: block; }
   .remrow { grid-template-columns: 1fr !important; }
   .remrow > :nth-child(2) { text-align: left !important; }
   .remrow > :last-child { justify-content: flex-start !important; }

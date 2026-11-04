@@ -20,6 +20,7 @@ const nav = [
   { to: '/documents', label: 'Documents', icon: 'doc' },
   { to: '/reminders', label: 'Reminders', icon: 'bell', mobile: true },
 ]
+const mobileNav = nav.filter((x) => x.mobile) // Garage, Overview | + | Log, Reminders
 const actions = [
   { kind: 'fillup', label: 'Add Fillup', icon: 'plus' },
   { kind: 'service', label: 'Add Service', icon: 'wrench' },
@@ -79,8 +80,11 @@ function logout() { auth.clear(); store.user = null; router.push('/login') }
     </main>
 
     <nav class="bnav" aria-label="Primary">
-      <RouterLink v-for="n in nav.filter((x) => x.mobile)" :key="n.to" :to="n.to" class="navbtn"><Icon :name="n.icon" />{{ n.label.replace('My ', '') }}</RouterLink>
-      <button class="btn pri" aria-label="Add fillup" style="width: 52px; height: 52px; border-radius: 16px; padding: 0" @click="add('fillup')"><Icon name="add" :size="24" /></button>
+      <RouterLink v-for="n in mobileNav.slice(0, 2)" :key="n.to" :to="n.to" class="navbtn"><Icon :name="n.icon" />{{ n.label.replace('My ', '') }}</RouterLink>
+      <button class="btn pri bnav-add" aria-label="Add fillup" @click="add('fillup')"><Icon name="add" :size="26" /></button>
+      <RouterLink v-for="n in mobileNav.slice(2)" :key="n.to" :to="n.to" class="navbtn">
+        <span style="position: relative; display: inline-flex"><Icon :name="n.icon" /><span v-if="n.to === '/reminders' && dueCount" class="bnav-dot" aria-hidden="true"></span></span>{{ n.label.replace('My ', '') }}
+      </RouterLink>
     </nav>
 
     <EntryDrawer v-if="store.entry" />
@@ -95,6 +99,9 @@ function logout() { auth.clear(); store.user = null; router.push('/login') }
 
 <style>
 .mobile-only { display: none !important; }
+.bnav .navbtn { flex: 1 1 0; justify-content: center; min-width: 0; }
+.bnav-add { width: 56px; height: 56px; border-radius: 18px; padding: 0; flex: none; margin: 0 6px; box-shadow: 0 6px 18px rgba(254, 70, 17, 0.35); }
+.bnav-dot { position: absolute; top: -2px; right: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
 @media (max-width: 820px) {
   .mobile-only { display: inline-flex !important; }
   .crumb { display: none; }

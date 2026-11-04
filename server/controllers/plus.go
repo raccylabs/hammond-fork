@@ -556,11 +556,15 @@ func uploadVehiclePhoto(c *gin.Context) {
 		fail(c, "photo", err)
 		return
 	}
-	if err := db.UpdateVehicleColumns(v.ID).Update("photo_attachment_id", att.ID).Error; err != nil {
+	credit := c.PostForm("credit")
+	if len(credit) > 300 {
+		credit = credit[:300]
+	}
+	if err := db.UpdateVehicleColumns(v.ID).Updates(map[string]interface{}{"photo_attachment_id": att.ID, "photo_credit": credit}).Error; err != nil {
 		fail(c, "photo", err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"photoAttachmentId": att.ID})
+	c.JSON(http.StatusOK, gin.H{"photoAttachmentId": att.ID, "photoCredit": credit})
 }
 
 // uploadVehicleFile stores a file, links it to the vehicle and returns the attachment.
@@ -590,7 +594,7 @@ func deleteVehiclePhoto(c *gin.Context) {
 	if !ok {
 		return
 	}
-	db.UpdateVehicleColumns(v.ID).Update("photo_attachment_id", "")
+	db.UpdateVehicleColumns(v.ID).Updates(map[string]interface{}{"photo_attachment_id": "", "photo_credit": ""})
 	c.JSON(http.StatusOK, gin.H{})
 }
 

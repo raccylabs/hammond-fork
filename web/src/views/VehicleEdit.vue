@@ -18,6 +18,7 @@ const busy = ref(false)
 const sharing = ref([])
 const users = ref([])
 const shareWith = ref('')
+const plate = ref(null)
 
 onMounted(async () => {
   v.value = await get(`/vehicles/${id}`)
@@ -30,9 +31,9 @@ async function save() {
   busy.value = true
   try { await put(`/vehicles/${id}`, toPayload(m)); await refreshVehicles(); toast('Vehicle saved'); router.push('/overview') } catch (x) { toast(x.message, true) } finally { busy.value = false }
 }
-async function photo(file) {
-  const fd = new FormData(); fd.append('file', file)
-  try { const r = await upload(`/vehicles/${id}/photo`, fd); v.value = { ...v.value, photoAttachmentId: r.photoAttachmentId }; await refreshVehicles(); toast('Photo updated') } catch (x) { toast(x.message, true) }
+async function photo(file, credit = '') {
+  const fd = new FormData(); fd.append('file', file); fd.append('credit', credit || '')
+  try { const r = await upload(`/vehicles/${id}/photo`, fd); v.value = { ...v.value, photoAttachmentId: r.photoAttachmentId, photoCredit: r.photoCredit }; await refreshVehicles(); toast('Photo updated') } catch (x) { toast(x.message, true) }
 }
 async function removePhoto() { await del(`/vehicles/${id}/photo`); v.value = { ...v.value, photoAttachmentId: '' }; refreshVehicles() }
 async function share() {
@@ -58,12 +59,13 @@ async function remove() {
     <div class="c4 stack" style="gap: 18px">
       <div class="card stack">
         <h2 class="ctitle">Photo</h2>
-        <VehiclePlate :vehicle="v" :height="180" editable @upload="photo" />
+        <VehiclePlate ref="plate" :vehicle="v" :height="180" editable @upload="photo" />
         <div class="row">
-          <label class="btn ghost grow"><Icon name="upload" :size="18" />{{ v.photoAttachmentId ? 'Replace' : 'Upload' }}<input type="file" accept="image/*" class="sr-only" @change="(e) => e.target.files?.[0] && photo(e.target.files[0])" /></label>
+          <button class="btn ghost grow" @click="plate.open('find')"><Icon name="spark" :size="18" />Find a photo</button>
+          <button class="btn ghost grow" @click="plate.open('upload')"><Icon name="upload" :size="18" />Upload</button>
           <button v-if="v.photoAttachmentId" class="btn ghost" @click="removePhoto">Remove</button>
         </div>
-        <div class="label">A cut-out PNG with a transparent background sits best on the dark plate.</div>
+        <div class="label">Hammond cuts out the background so the car sits on the dark plate. Found photos come from Wikimedia Commons with the photographer credited.</div>
       </div>
       <div class="card stack" style="animation-delay: 0.05s">
         <h2 class="ctitle">Shared with</h2>

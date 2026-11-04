@@ -13,9 +13,11 @@ const q = ref('')
 const limit = ref(60)
 
 const rows = computed(() => {
-  const effMap = new Map(withEfficiency(fillups.value).map((f) => [f.id, f.eff]))
+  const effList = withEfficiency(fillups.value)
+  const effMap = new Map(effList.map((f) => [f.id, f.eff]))
+  const badSet = new Set(effList.filter((f) => f.bad).map((f) => f.id))
   const all = [
-    ...fillups.value.map((f) => ({ id: f.id, kind: 'fillup', type: 'Fuel', rec: f, date: f.date, title: `${f.fillingStation || 'Fillup'} · ${num(f.fuelQuantity, 2)} ${fuelUnit(v.value)}`, odo: f.odoReading, detail: [effMap.get(f.id) ? `${effMap.get(f.id).toFixed(1)} ${effUnit(v.value)}` : '', `${money(f.perUnitPrice, 3)}/${fuelUnit(v.value)}`, f.isTankFull === false ? 'partial' : ''].filter(Boolean).join(' · '), who: f.user?.name, amount: f.totalAmount, color: 'var(--s1)' })),
+    ...fillups.value.map((f) => ({ id: f.id, kind: 'fillup', type: 'Fuel', rec: f, date: f.date, title: `${f.fillingStation || 'Fillup'} · ${num(f.fuelQuantity, 2)} ${fuelUnit(v.value)}`, odo: f.odoReading, detail: [badSet.has(f.id) ? '⚠ odometer lower than an earlier fillup' : '', effMap.get(f.id) ? `${effMap.get(f.id).toFixed(1)} ${effUnit(v.value)}` : '', `${money(f.perUnitPrice, 3)}/${fuelUnit(v.value)}`, f.isTankFull === false ? 'partial' : ''].filter(Boolean).join(' · '), who: f.user?.name, amount: f.totalAmount, color: 'var(--s1)' })),
     ...expenses.value.map((e) => {
       const cat = expenseCategory(e)
       const isS = ['Maintenance', 'Repairs', 'Tires'].includes(cat)
@@ -46,11 +48,11 @@ function edit(r) { openEntry(r.kind === 'fillup' ? 'fillup' : r.type === 'Servic
       <label class="field grow" style="max-width: 360px"><span class="sr-only">Search</span><input v-model="q" placeholder="Search stations, repairs, notes…" /></label>
       <button class="btn pri" @click="openEntry('fillup')"><Icon name="add" :size="18" />Add entry</button>
     </div>
-    <div class="scrollx">
+    <div class="scrollx log-table">
       <table class="tbl">
         <thead><tr><th scope="col">Date</th><th scope="col">Type</th><th scope="col">Description</th><th scope="col">Odometer</th><th scope="col">Details</th><th scope="col">By</th><th scope="col" style="text-align: right">Amount</th><th scope="col"><span class="sr-only">Edit</span></th></tr></thead>
         <tbody>
-          <tr v-for="(r, i) in rows.slice(0, limit)" :key="r.id" :style="{ animationDelay: Math.min(i * 0.02, 0.5) + 's' }">
+          <tr v-for="(r, i) in rows.slice(0, limit)" :key="r.id" :style="{ animationDelay: Math.min(i * 0.02, 0.5) + 's', cursor: 'pointer' }" @click="edit(r)">
             <td>{{ fdate(r.date) }}</td>
             <td><span class="badge"><span class="dot" :style="{ background: r.color }"></span>{{ r.type }}</span></td>
             <td>{{ r.title }}</td>
@@ -58,10 +60,21 @@ function edit(r) { openEntry(r.kind === 'fillup' ? 'fillup' : r.type === 'Servic
             <td class="muted">{{ r.detail }}</td>
             <td class="muted">{{ r.who || '' }}</td>
             <td style="text-align: right; font-weight: 600">{{ money(r.amount) }}</td>
-            <td style="text-align: right"><button class="btn ghost icon" style="min-height: 36px; width: 36px" :aria-label="'Edit ' + r.title" @click="edit(r)"><Icon name="edit" :size="16" /></button></td>
+            <td style="text-align: right"><button class="btn ghost icon" style="min-height: 36px; width: 36px" :aria-label="'Edit ' + r.title" @click.stop="edit(r)"><Icon name="edit" :size="16" /></button></td>
           </tr>
         </tbody>
       </table>
+    </div>
+    <div class="log-cards">
+      <button v-for="r in rows.slice(0, limit)" :key="'c' + r.id" class="rowbtn" :aria-label="'Edit ' + r.title" @click="edit(r)">
+        <div class="tile-ic"><Icon :name="r.kind === 'fillup' ? 'pump' : r.type === 'Service' ? 'wrench' : 'receipt'" :size="18" /></div>
+        <div class="grow">
+          <div style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.title }}</div>
+          <div class="label">{{ fdate(r.date) }} · {{ r.odo ? num(r.odo) + ' ' + distUnit() : 'no odometer' }}{{ r.detail ? ' · ' + r.detail : '' }}</div>
+        </div>
+        <div style="font-weight: 600; font-size: 14px">{{ money(r.amount) }}</div>
+        <Icon name="edit" :size="16" style="color: var(--faint)" />
+      </button>
     </div>
     <div v-if="!rows.length" class="empty">{{ loading ? 'Loading…' : 'Nothing here yet.' }}</div>
     <button v-if="rows.length > limit" class="btn ghost" style="align-self: center" @click="limit += 100">Show more ({{ rows.length - limit }} left)</button>

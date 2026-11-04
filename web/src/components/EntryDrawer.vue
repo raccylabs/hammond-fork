@@ -53,10 +53,14 @@ async function loadVehicle() {
     const s = await get(`/vehicles/${f.vehicleId}/services`)
     items.value = s.items.map((x) => x.item)
     odometer.value = s.odometer
-    if (!editing && f.odo === '') f.odo = s.odometer ? String(s.odometer) : ''
+    // Leave the odometer blank for new fillups: a pre-filled last reading is easy to save unchanged.
+    if (!editing && f.odo === '' && kind.value !== 'fillup') f.odo = s.odometer ? String(s.odometer) : ''
     if (kind.value === 'service' && !f.serviceId) f.serviceId = items.value.find((i) => i.kind !== 'custom')?.id || 'other'
     const fills = await get(`/vehicles/${f.vehicleId}/fillups`)
-    lastFill.value = (fills || []).filter((x) => !editing || x.id !== editing.id).sort((a, b) => b.odoReading - a.odoReading)[0] || null
+    const others = (fills || []).filter((x) => !editing || x.id !== editing.id)
+    // When editing, compare against the fillup just before this one, not the newest.
+    const before = editing ? others.filter((x) => new Date(x.date) <= new Date(editing.date)) : others
+    lastFill.value = before.sort((a, b) => b.odoReading - a.odoReading)[0] || null
   } catch {}
 }
 onMounted(loadVehicle)
@@ -64,6 +68,16 @@ watch(() => f.vehicleId, () => { f.odo = ''; f.serviceId = ''; loadVehicle() })
 
 watch(() => [f.qty, f.price], () => {
   if (!totalTouched.value && f.qty && f.price) f.total = (parseFloat(f.qty) * parseFloat(f.price)).toFixed(2)
+})
+const confirmOdo = ref(false)
+watch(() => f.odo, () => (confirmOdo.value = false))
+const odoWarn = computed(() => {
+  if (kind.value !== 'fillup' || !lastFill.value || f.odo === '') return ''
+  const o = parseInt(f.odo)
+  if (!(o > 0)) return ''
+  if (o <= lastFill.value.odoReading) return `That's not more than your last fillup (${num(lastFill.value.odoReading)}).`
+  if (o - lastFill.value.odoReading > 2500) return `That's ${num(o - lastFill.value.odoReading)} ${distUnit()} since your last fillup. Double-check it.`
+  return ''
 })
 const effPreview = computed(() => {
   if (kind.value !== 'fillup' || !lastFill.value || !f.full || f.missed) return ''
@@ -115,6 +129,7 @@ async function save() {
         userId: store.user.id, date: dayToISO(f.date),
       }
       if (!body.fuelQuantity || !body.totalAmount || !body.odoReading) throw new Error('Quantity, total and odometer are required')
+      if (odoWarn.value && !confirmOdo.value) { confirmOdo.value = true; throw new Error(odoWarn.value + ' Press save again to keep it anyway.') }
       if (editing) await put(`/vehicles/${vid}/fillups/${editing.id}`, body)
       else await post(`/vehicles/${vid}/fillups`, body)
       toast(editing ? 'Fillup updated' : 'Fillup saved' + (effPreview.value ? ' · ' + effPreview.value.match(/[\d.]+ \S+/)[0] : ''))
@@ -194,7 +209,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
       <template v-if="kind !== 'reminder'">
         <div class="grid2" :class="{ hl }">
           <label class="field">Date<input v-model="f.date" type="date" /></label>
-          <label class="field">Odometer ({{ distUnit() }})<input v-model="f.odo" inputmode="numeric" /></label>
+          <label class="field">Odometer ({{ distUnit() }})<input v-model="f.odo" inputmode="numeric" :placeholder="odometer ? 'Last: ' + num(odometer) : ''" /><span v-if="odoWarn" class="hint" style="color: var(--warn)">{{ odoWarn }}</span></label>
         </div>
       </template>
 

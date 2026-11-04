@@ -78,6 +78,7 @@ type Vehicle struct {
 	EstimatedValue    float32      `json:"estimatedValue"`
 	InsurancePremium  float32      `json:"insurancePremium"`
 	PhotoAttachmentID string       `json:"photoAttachmentId"`
+	PhotoCredit       string       `json:"photoCredit"`
 	RecallCount       int          `json:"recallCount"`
 	RecallCheckedAt   *time.Time   `json:"recallCheckedAt"`
 	RecallData        string       `json:"-"`

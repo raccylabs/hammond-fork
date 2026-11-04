@@ -25,6 +25,8 @@ watch([() => v.value?.id, () => store.dataVersion], async ([id]) => {
 
 const now = new Date()
 const eff = computed(() => withEfficiency(fillups.value))
+const effPts = computed(() => eff.value.filter((f) => f.eff))
+const badCount = computed(() => eff.value.filter((f) => f.bad).length)
 const odo = computed(() => Math.max(0, ...fillups.value.map((f) => f.odoReading), ...expenses.value.map((e) => e.odoReading || 0)))
 const lastFill = computed(() => eff.value[eff.value.length - 1])
 
@@ -148,8 +150,8 @@ const healthT = useTween(() => tireView.value?.health || 0)
 
 // ---------------- activity ----------------
 const recent = computed(() => [
-  ...fillups.value.map((f) => ({ date: f.date, icon: 'pump', title: `${f.fillingStation || 'Fillup'} · ${num(f.fuelQuantity, 2)} ${fuelUnit(v.value)}`, who: f.user?.name, amount: f.totalAmount })),
-  ...expenses.value.map((e) => ({ date: e.date, icon: expenseCategory(e) === 'Maintenance' ? 'wrench' : 'receipt', title: e.expenseType || 'Expense', who: e.user?.name, amount: e.amount })),
+  ...fillups.value.map((f) => ({ kind: 'fillup', rec: f, date: f.date, icon: 'pump', title: `${f.fillingStation || 'Fillup'} · ${num(f.fuelQuantity, 2)} ${fuelUnit(v.value)}`, who: f.user?.name, amount: f.totalAmount })),
+  ...expenses.value.map((e) => ({ kind: ['Maintenance', 'Repairs', 'Tires'].includes(expenseCategory(e)) ? 'service' : 'expense', rec: e, date: e.date, icon: expenseCategory(e) === 'Maintenance' ? 'wrench' : 'receipt', title: e.expenseType || 'Expense', who: e.user?.name, amount: e.amount })),
 ].sort((a, b) => toDate(b.date) - toDate(a.date)).slice(0, 4))
 const docBadges = computed(() => docs.value.map((d) => {
   const left = d.expiryDate ? Math.round((toDate(d.expiryDate) - now) / 86400000) : null
@@ -174,10 +176,13 @@ const docBadges = computed(() => docs.value.map((d) => {
       <div class="card c5 stack" style="gap: 16px">
         <div class="between"><h2 class="ctitle">Vehicle</h2><RouterLink :to="`/vehicles/${v.id}/edit`" class="chip"><Icon name="edit" :size="14" />Edit</RouterLink></div>
         <VehiclePlate :vehicle="v" :height="230" />
-        <div style="display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 12px; align-items: end">
-          <div><div class="label">{{ v.make }} · {{ v.yearOfManufacture }}</div><div class="disp" style="font-size: 28px; font-weight: 600; line-height: 1.05">{{ v.model }}</div></div>
-          <div><div class="label">Mileage</div><div class="val">{{ odo ? num(odo) : '—' }}</div></div>
-          <div><div class="label">Latest fillup</div><div class="val">{{ lastFill ? `${num(lastFill.fuelQuantity, 1)} ${fuelUnit(v)}` : '—' }}</div></div>
+        <div class="facts">
+          <div class="label">{{ v.make }} · {{ v.yearOfManufacture }}</div>
+          <div class="disp" style="font-size: 28px; font-weight: 600; line-height: 1">{{ v.model }}</div>
+          <div class="label">Mileage</div>
+          <div class="val" style="line-height: 1">{{ odo ? num(odo) : '—' }}</div>
+          <div class="label">Latest fillup</div>
+          <div class="val" style="line-height: 1">{{ lastFill ? `${num(lastFill.fuelQuantity, 1)} ${fuelUnit(v)}` : '—' }}</div>
         </div>
         <div class="grid3" style="padding-top: 14px; border-top: 1px solid var(--line)">
           <div><div class="label">Oil</div><div style="margin-top: 4px">{{ v.oilType || '—' }}</div></div>
@@ -221,11 +226,20 @@ const docBadges = computed(() => docs.value.map((d) => {
             </div>
           </div>
         </template>
+        <div v-else-if="effPts.length === 1" class="stack" style="padding: 20px 0">
+          <div><div class="label">So far</div><div class="big">{{ effPts[0].eff.toFixed(1) }} <span style="font-size: 14px; color: var(--muted); font-weight: 400">{{ effUnit(v) }}</span></div></div>
+          <div class="label">From your last two full tanks. The chart starts after your next full-tank fillup.</div>
+        </div>
         <div v-else class="empty" style="padding: 40px 10px">
           <Icon name="pump" :size="32" />
-          <div>{{ loading ? 'Loading…' : 'Log two full-tank fillups and your efficiency chart appears here.' }}</div>
+          <div>{{ loading ? 'Loading…' : fillups.length < 2 ? 'Log two full-tank fillups and your efficiency chart appears here.' : 'Not enough full-tank fillups with increasing odometer readings yet.' }}</div>
           <button v-if="!loading" class="btn out" @click="openEntry('fillup')">Add a fillup</button>
         </div>
+        <RouterLink v-if="badCount" to="/log" class="row" style="gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--card2); color: var(--text); font-size: 13px">
+          <Icon name="alert" :size="18" style="color: var(--warn)" />
+          <span class="grow">{{ badCount }} fillup{{ badCount === 1 ? ' has an odometer reading' : 's have odometer readings' }} lower than an earlier one, so {{ badCount === 1 ? "it's" : "they're" }} left out. Tap to fix in the log.</span>
+          <Icon name="chevron" :size="16" />
+        </RouterLink>
       </div>
 
       <div v-for="(t, i) in kpis" :key="t.label" class="card c3 stack" style="gap: 8px" :style="{ animationDelay: 0.05 + i * 0.05 + 's' }">
@@ -305,11 +319,11 @@ const docBadges = computed(() => docs.value.map((d) => {
 
       <div class="card c4 stack" style="gap: 10px; animation-delay: 0.3s">
         <div class="between"><h2 class="ctitle">Recent activity</h2><RouterLink to="/log" class="chip">All</RouterLink></div>
-        <div v-for="(r, i) in recent" :key="i" class="listrow">
+        <button v-for="(r, i) in recent" :key="i" class="listrow rowbtn" :aria-label="'Edit ' + r.title" @click="openEntry(r.kind, { vehicleId: v.id, record: r.rec })">
           <div class="tile-ic"><Icon :name="r.icon" :size="18" /></div>
           <div class="grow"><div style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.title }}</div><div class="label">{{ fdate(r.date) }}{{ r.who ? ' · ' + r.who : '' }}</div></div>
           <div style="font-weight: 600; font-size: 14px">{{ money(r.amount) }}</div>
-        </div>
+        </button>
         <div v-if="!recent.length" class="label">Nothing logged yet.</div>
         <div class="label" style="margin-top: 6px">Documents</div>
         <div class="chips">

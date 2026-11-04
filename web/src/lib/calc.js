@@ -8,15 +8,21 @@ const byDateAsc = (a, b) => toDate(a.date) - toDate(b.date) || a.odoReading - b.
  * (distance per fuel unit) set on full-tank fills that have a usable previous full fill.
  */
 export function withEfficiency(fillups) {
-  const list = [...(fillups || [])].sort(byDateAsc).map((f) => ({ ...f, eff: null }))
+  const list = [...(fillups || [])].sort(byDateAsc).map((f) => ({ ...f, eff: null, bad: false }))
   let lastFull = null
+  let lastOdo = -Infinity
   let fuelSince = 0
   for (const f of list) {
+    // A reading that doesn't move forward is almost always a typo. Flag it and
+    // keep measuring from the last good full tank instead of breaking the chain.
+    if (f.odoReading <= lastOdo) { f.bad = true; fuelSince += f.fuelQuantity || 0; continue }
+    lastOdo = f.odoReading
     fuelSince += f.fuelQuantity || 0
     const missed = f.hasMissedFillup === true
     if (f.isTankFull !== false) {
-      if (lastFull && !missed && f.odoReading > lastFull.odoReading && fuelSince > 0) {
-        f.eff = (f.odoReading - lastFull.odoReading) / fuelSince
+      if (lastFull && !missed && fuelSince > 0) {
+        const e = (f.odoReading - lastFull.odoReading) / fuelSince
+        if (e > 0.5 && e < 250) f.eff = e
       }
       lastFull = f
       fuelSince = 0

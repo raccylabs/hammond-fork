@@ -29,8 +29,8 @@ const next = computed(() => store.reminders.find((r) => r.status !== 'snoozed' &
 const recalls = computed(() => store.vehicles.filter((v) => v.recallCount > 0))
 
 function open(v) { selectVehicle(v.id); router.push('/overview') }
-async function photo(v, file) {
-  const fd = new FormData(); fd.append('file', file)
+async function photo(v, file, credit = '') {
+  const fd = new FormData(); fd.append('file', file); fd.append('credit', credit || '')
   try { await upload(`/vehicles/${v.id}/photo`, fd); await refreshVehicles(); toast('Photo updated') } catch (x) { toast(x.message, true) }
 }
 </script>
@@ -63,11 +63,14 @@ async function photo(v, file) {
         <article v-for="c in cards" :key="c.v.id" class="card" :style="{ flex: '0 0 min(400px, 86vw)', padding: '14px', display: 'flex', flexDirection: 'column', gap: '14px', borderColor: c.v.id === store.vid ? 'var(--accent)' : 'var(--line)', animationDelay: c.delay + 's' }">
           <div style="background: var(--card2); border-radius: 16px; padding: 18px 18px 20px">
             <div class="label">Vehicle · {{ c.v.yearOfManufacture || '' }}</div>
-            <VehiclePlate :vehicle="c.v" :height="190" editable style="margin: 12px -4px 16px" @upload="(f) => photo(c.v, f)" />
-            <div class="row wrap" style="align-items: flex-end; gap: 16px">
-              <div class="grow"><div class="label">{{ c.v.make }}</div><div class="disp" style="font-size: 32px; font-weight: 600; line-height: 1.05">{{ c.v.nickname && c.v.nickname !== c.v.make + ' ' + c.v.model ? c.v.nickname : c.v.model }}</div></div>
-              <div><div class="label">Mileage</div><div class="val" style="font-size: 17px">{{ c.odo ? num(c.odo) : '—' }}</div></div>
-              <div><div class="label">Latest fillup</div><div class="val" style="font-size: 17px">{{ c.last ? `${num(c.last.fuelQuantity, 1)} ${fuelUnit(c.v)}` : 'None yet' }}</div></div>
+            <VehiclePlate :vehicle="c.v" :height="190" editable style="margin: 12px -4px 16px" @upload="(f, cr) => photo(c.v, f, cr)" />
+            <div class="facts" style="grid-template-columns: 1.6fr auto auto; column-gap: 18px">
+              <div class="label">{{ c.v.make }}</div>
+              <div class="disp" style="font-size: 32px; font-weight: 600; line-height: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ c.v.nickname && c.v.nickname !== c.v.make + ' ' + c.v.model ? c.v.nickname : c.v.model }}</div>
+              <div class="label">Mileage</div>
+              <div class="val" style="font-size: 17px; line-height: 1">{{ c.odo ? num(c.odo) : '—' }}</div>
+              <div class="label">Latest fillup</div>
+              <div class="val" style="font-size: 17px; line-height: 1">{{ c.last ? `${num(c.last.fuelQuantity, 1)} ${fuelUnit(c.v)}` : 'None yet' }}</div>
             </div>
           </div>
           <div style="background: var(--card2); border-radius: 16px; padding: 18px">
