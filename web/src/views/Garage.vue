@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { store, selectVehicle, openEntry, toast, refreshVehicles } from '../lib/store.js'
 import { upload } from '../lib/api.js'
-import { money, num, distUnit, fuelUnit, vname, reminderStatusText, LEVEL_COLOR } from '../lib/format.js'
+import { money, num, distUnit, fuelUnit, vname, reminderStatusText, LEVEL_COLOR, LEVEL_TEXT } from '../lib/format.js'
 import { useAllData } from '../lib/useData.js'
 import { sum, inMonth } from '../lib/calc.js'
 import Icon from '../components/Icon.vue'
@@ -44,19 +44,19 @@ async function photo(v, file, credit = '') {
       <button class="btn pri" @click="store.wizard = true">Add a vehicle</button>
     </div>
     <template v-else>
-      <div class="g12" style="margin-bottom: 26px">
-        <div class="card c3"><div class="label">Vehicles</div><div class="big" style="margin-top: 6px">{{ store.vehicles.length }}</div></div>
-        <div class="card c3" style="animation-delay: 0.05s"><div class="label">Spent this month, all vehicles</div><div class="big" style="margin-top: 6px">{{ money(monthSpend) }}</div></div>
-        <RouterLink to="/reminders" class="card c3" style="animation-delay: 0.1s; color: inherit">
-          <div class="label">Next service due</div>
-          <div class="val" style="margin-top: 8px">{{ next ? `${next.title} · ${next.vehicleName}` : 'Nothing scheduled' }}</div>
-          <div class="label" style="margin-top: 2px">{{ next ? reminderStatusText(next) : 'Add a schedule from Reminders' }}</div>
+      <div class="card summary">
+        <div class="sum-item"><div class="label">Vehicles</div><div class="sum-val">{{ store.vehicles.length }}</div></div>
+        <div class="sum-item"><div class="label">This month</div><div class="sum-val">{{ money(monthSpend, 0) }}</div></div>
+        <RouterLink to="/reminders" class="sum-item" style="color: inherit">
+          <div class="label">Next service</div>
+          <div class="sum-val sm" :style="{ color: next && next.level > 0 ? LEVEL_TEXT[next.level] : 'var(--text)' }">{{ next ? next.title : 'None' }}</div>
+          <div class="label sum-sub">{{ next ? `${next.vehicleName} · ${reminderStatusText(next).toLowerCase()}` : 'Set up in Reminders' }}</div>
         </RouterLink>
-        <div class="card c3" style="animation-delay: 0.15s">
+        <RouterLink to="/reminders" class="sum-item" style="color: inherit">
           <div class="label">Open recalls</div>
-          <div class="row" style="margin-top: 8px; gap: 8px"><Icon :name="recalls.length ? 'alert' : 'shield'" :size="20" /><span class="val">{{ recalls.length ? `${recalls.reduce((a, v) => a + v.recallCount, 0)} open` : 'None' }}</span></div>
-          <div class="label" style="margin-top: 2px">{{ recalls.length ? recalls.map(vname).join(', ') : 'Checked weekly with NHTSA' }}</div>
-        </div>
+          <div class="sum-val sm row" style="gap: 6px"><Icon :name="recalls.length ? 'alert' : 'shield'" :size="16" />{{ recalls.length ? `${recalls.reduce((a, v) => a + v.recallCount, 0)} open` : 'None' }}</div>
+          <div class="label sum-sub">{{ recalls.length ? recalls.map(vname).join(', ') : 'Checked weekly' }}</div>
+        </RouterLink>
       </div>
 
       <div class="scroller">
@@ -64,13 +64,13 @@ async function photo(v, file, credit = '') {
           <div style="background: var(--card2); border-radius: 16px; padding: 18px 18px 20px">
             <div class="label">Vehicle · {{ c.v.yearOfManufacture || '' }}</div>
             <VehiclePlate :vehicle="c.v" :height="190" editable style="margin: 12px -4px 16px" @upload="(f, cr) => photo(c.v, f, cr)" />
-            <div class="facts" style="grid-template-columns: 1.6fr auto auto; column-gap: 18px">
-              <div class="label">{{ c.v.make }}</div>
-              <div class="disp" style="font-size: 32px; font-weight: 600; line-height: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ c.v.nickname && c.v.nickname !== c.v.make + ' ' + c.v.model ? c.v.nickname : c.v.model }}</div>
-              <div class="label">Mileage</div>
-              <div class="val" style="font-size: 17px; line-height: 1">{{ c.odo ? num(c.odo) : '—' }}</div>
-              <div class="label">Latest fillup</div>
-              <div class="val" style="font-size: 17px; line-height: 1">{{ c.last ? `${num(c.last.fuelQuantity, 1)} ${fuelUnit(c.v)}` : 'None yet' }}</div>
+            <div class="gfacts">
+              <div class="label" style="grid-area: mk">{{ c.v.make }}</div>
+              <div class="disp gname" style="grid-area: nm">{{ c.v.nickname && c.v.nickname !== c.v.make + ' ' + c.v.model ? c.v.nickname : c.v.model }}</div>
+              <div class="label" style="grid-area: l1">Mileage</div>
+              <div class="val" style="grid-area: v1; font-size: 17px; line-height: 1">{{ c.odo ? num(c.odo) : '—' }}</div>
+              <div class="label" style="grid-area: l2">Latest fillup</div>
+              <div class="val" style="grid-area: v2; font-size: 17px; line-height: 1">{{ c.last ? `${num(c.last.fuelQuantity, 1)} ${fuelUnit(c.v)}` : 'None yet' }}</div>
             </div>
           </div>
           <div style="background: var(--card2); border-radius: 16px; padding: 18px">
@@ -96,3 +96,27 @@ async function photo(v, file, credit = '') {
     </template>
   </section>
 </template>
+
+<style scoped>
+.gfacts { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: 'mk l1 l2' 'nm v1 v2'; column-gap: 18px; row-gap: 4px; align-items: baseline; }
+.gname { font-size: 32px; font-weight: 600; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 820px) {
+  .gfacts { grid-template-columns: 1fr 1fr; grid-template-areas: 'mk mk' 'nm nm' 'l1 l2' 'v1 v2'; }
+  .gfacts > :nth-child(3), .gfacts > :nth-child(5) { margin-top: 10px; }
+  .gname { font-size: 30px; }
+}
+.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0; margin-bottom: 22px; }
+.sum-item { padding: 16px 20px; min-width: 0; border-left: 1px solid var(--line); }
+.sum-item:first-child { border-left: none; }
+.sum-val { font-size: 24px; font-weight: 600; font-stretch: 118%; margin-top: 4px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sum-val.sm { font-size: 17px; font-stretch: 100%; }
+.sum-sub { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 820px) {
+  .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 16px; }
+  .sum-item { padding: 12px 14px; }
+  .sum-item:nth-child(3) { border-left: none; }
+  .sum-item:nth-child(n + 3) { border-top: 1px solid var(--line); }
+  .sum-val { font-size: 20px; }
+  .sum-val.sm { font-size: 15px; }
+}
+</style>
